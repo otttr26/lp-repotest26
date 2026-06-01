@@ -6,13 +6,8 @@
 
     // ---- ДОДАЄМО КНОПКУ В МЕНЮ ----
     function addMenu() {
-        var icon = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M3 21c0-4.418 4.029-8 9-8s9 3.582 9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
-
-        var item = $('<li class="menu__item selector">'
-            + '<div class="menu__ico">' + icon + '</div>'
-            + '<div class="menu__text">Гріффіни</div>'
-            + '</li>');
-
+        var icon = '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M3 21c0-4.418 4.029-8 9-8s9 3.582 9 8" stroke="currentColor" stroke-width="1.5"/></svg>';
+        var item = $('<li class="menu__item selector"><div class="menu__ico">' + icon + '</div><div class="menu__text">Гріффіни</div></li>');
         item.on('hover:enter click', function () {
             Lampa.Activity.push({
                 title:     'Гріффіни',
@@ -20,20 +15,17 @@
                 url:       BASE_URL
             });
         });
-
         $('.menu__list').first().append(item);
     }
 
     // ---- КОМПОНЕНТ: СЕЗОНИ ----
     function SeasonsComponent(object) {
         var scroll = new Lampa.Scroll({ mask: true, over: true });
-        var files  = new Lampa.Explorer(object);
         var active = false;
 
         this.create = function () {
             var self = this;
             scroll.minus();
-            files.appendFiles(scroll.render());
 
             for (var s = 24; s >= 1; s--) {
                 (function (seasonNum) {
@@ -43,9 +35,8 @@
                         vote_average: '',
                         poster:       POSTER,
                         backdrop:     POSTER,
-                        overview:     'Сезон ' + seasonNum + ' — Гріффіни'
+                        overview:     'Сезон ' + seasonNum
                     });
-
                     card.on('hover:enter', function () {
                         Lampa.Activity.push({
                             url:       BASE_URL + '/season.php?id=' + seasonNum,
@@ -53,9 +44,8 @@
                             component: 'fg_episodes'
                         });
                     });
-
                     card.on('hover:focus', function (elem) { scroll.update(elem, true); });
-                    files.append(card);
+                    scroll.append(card);
                 })(s);
             }
 
@@ -68,8 +58,8 @@
             active = true;
             Lampa.Controller.add('content', {
                 toggle: function () {
-                    Lampa.Controller.collectionSet(scroll.render(), files.render());
-                    Lampa.Controller.collectionFocus(false, files.render());
+                    Lampa.Controller.collectionSet(scroll.render(), scroll.render());
+                    Lampa.Controller.collectionFocus(false, scroll.render());
                 },
                 left:  function () { Navigator.move('left'); },
                 right: function () { Navigator.move('right'); },
@@ -83,32 +73,33 @@
         this.back    = function () { Lampa.Activity.backward(); };
         this.pause   = function () { active = false; };
         this.stop    = function () { active = false; };
-        this.render  = function () { return files.render(); };
-        this.destroy = function () { files.destroy(); scroll.destroy(); };
+        this.render  = function () { return scroll.render(); };
+        this.destroy = function () { scroll.destroy(); };
     }
 
     // ---- КОМПОНЕНТ: СЕРІЇ ----
     function EpisodesComponent(object) {
         var network = new Lampa.Reguest();
         var scroll  = new Lampa.Scroll({ mask: true, over: true });
-        var files   = new Lampa.Explorer(object);
         var active  = false;
 
         this.create = function () {
             var self = this;
             scroll.minus();
-            files.appendFiles(scroll.render());
 
             network.silent(object.url, function (html) {
                 var doc   = (new DOMParser()).parseFromString(html, 'text/html');
                 var links = doc.querySelectorAll('a[href*="page.php?id="]');
 
-                if (!links.length) { files.empty(); return; }
+                if (!links.length) {
+                    scroll.append($('<div style="padding:2em;opacity:0.6;">Серії не знайдено</div>'));
+                    self.start();
+                    return;
+                }
 
                 links.forEach(function (a) {
                     var match = (a.getAttribute('href') || '').match(/page\.php\?id=(\d+)/);
                     if (!match) return;
-
                     var id    = match[1];
                     var epNum = parseInt(id.slice(-2), 10) || 0;
                     var title = 'Е' + String(epNum).padStart(2, '0') + ' — '
@@ -118,7 +109,6 @@
                         title: title, release_date: '', vote_average: '',
                         poster: POSTER, backdrop: POSTER, overview: title
                     });
-
                     card.on('hover:enter', function () {
                         Lampa.Activity.push({
                             url:       BASE_URL + '/page.php?id=' + id,
@@ -126,15 +116,14 @@
                             component: 'fg_watch'
                         });
                     });
-
                     card.on('hover:focus', function (elem) { scroll.update(elem, true); });
-                    files.append(card);
+                    scroll.append(card);
                 });
 
                 self.start();
             }, function () {
-                files.empty();
-                Lampa.Noty.show('Помилка завантаження серій');
+                scroll.append($('<div style="padding:2em;opacity:0.6;">Помилка завантаження</div>'));
+                self.start();
             });
 
             return this.render();
@@ -145,8 +134,8 @@
             active = true;
             Lampa.Controller.add('content', {
                 toggle: function () {
-                    Lampa.Controller.collectionSet(scroll.render(), files.render());
-                    Lampa.Controller.collectionFocus(false, files.render());
+                    Lampa.Controller.collectionSet(scroll.render(), scroll.render());
+                    Lampa.Controller.collectionFocus(false, scroll.render());
                 },
                 left:  function () { Navigator.move('left'); },
                 right: function () { Navigator.move('right'); },
@@ -160,8 +149,8 @@
         this.back    = function () { Lampa.Activity.backward(); };
         this.pause   = function () { active = false; };
         this.stop    = function () { active = false; };
-        this.render  = function () { return files.render(); };
-        this.destroy = function () { network.clear(); files.destroy(); scroll.destroy(); };
+        this.render  = function () { return scroll.render(); };
+        this.destroy = function () { network.clear(); scroll.destroy(); };
     }
 
     // ---- КОМПОНЕНТ: ПЕРЕГЛЯД ----
@@ -171,7 +160,6 @@
         this.create = function () {
             var self = this;
             html.append($('<div style="font-size:1.5em;font-weight:bold;text-align:center;"></div>').text(object.title));
-
             var btn = $('<div class="full-button selector" style="font-size:1.2em;padding:0.8em 2.5em;border-radius:0.4em;text-align:center;cursor:pointer;"></div>').text('▶ Відкрити у браузері');
             btn.on('hover:enter click', function () { window.open(object.url, '_blank'); });
             html.append(btn);
@@ -196,12 +184,12 @@
         this.destroy = function () {};
     }
 
-    // ---- РЕЄСТРАЦІЯ КОМПОНЕНТІВ ----
+    // ---- РЕЄСТРАЦІЯ ----
     Lampa.Component.add('fg_seasons',  SeasonsComponent);
     Lampa.Component.add('fg_episodes', EpisodesComponent);
     Lampa.Component.add('fg_watch',    WatchComponent);
 
-    // ---- СТАРТ — чекаємо поки DOM меню готовий ----
+    // ---- СТАРТ ----
     setTimeout(addMenu, 500);
 
 })();
