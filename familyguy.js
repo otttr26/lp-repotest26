@@ -189,19 +189,16 @@
     Lampa.Component.add('fg_watch',    WatchComponent);
 
     // ---- ДОДАЄМО КНОПКУ В МЕНЮ ----
-    // name — просто рядок, НЕ ключ перекладу
+    // Правильна сигнатура: addButton(svg_icon, title, action)
     function addMenu() {
-        Lampa.Menu.addButton({
-            id:     'family_guy',
-            name:   'Гріффіни',           // <- звичайний рядок
-            icon:   '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M3 21c0-4.418 4.029-8 9-8s9 3.582 9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
-            action: function () {
-                Lampa.Activity.push({
-                    title:     'Гріффіни',
-                    component: 'fg_seasons',
-                    url:       BASE_URL
-                });
-            }
+        var icon = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M3 21c0-4.418 4.029-8 9-8s9 3.582 9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+
+        Lampa.Menu.addButton(icon, 'Гріффіни', function () {
+            Lampa.Activity.push({
+                title:     'Гріффіни',
+                component: 'fg_seasons',
+                url:       BASE_URL
+            });
         });
     }
 
