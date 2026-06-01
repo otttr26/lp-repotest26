@@ -31,8 +31,7 @@
 
                     var id    = match[1];
                     var epNum = parseInt(id.slice(-2), 10) || 0;
-                    var text  = a.textContent.trim();
-                    var lines = text.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+                    var lines = a.textContent.trim().split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
                     var title = 'Е' + String(epNum).padStart(2,'0') + ' — ' + (lines[0] || 'Серія ' + epNum);
 
                     var card = Lampa.Template.get('card', {
@@ -52,10 +51,7 @@
                         });
                     });
 
-                    card.on('hover:focus', function (elem) {
-                        scroll.update(elem, true);
-                    });
-
+                    card.on('hover:focus', function (elem) { scroll.update(elem, true); });
                     files.append(card);
                 });
 
@@ -78,10 +74,7 @@
                 },
                 left:  function () { Navigator.move('left'); },
                 right: function () { Navigator.move('right'); },
-                up: function () {
-                    if (Navigator.canmove('up')) Navigator.move('up');
-                    else Lampa.Controller.toggle('head');
-                },
+                up:    function () { Navigator.canmove('up') ? Navigator.move('up') : Lampa.Controller.toggle('head'); },
                 down:  function () { Navigator.move('down'); },
                 back:  this.back
             });
@@ -101,25 +94,21 @@
 
         this.create = function () {
             var self = this;
-            var title = $('<div style="font-size:1.5em;font-weight:bold;text-align:center;"></div>').text(object.title);
-            var btn   = $('<div class="full-button selector" style="font-size:1.2em;padding:0.8em 2.5em;border-radius:0.4em;text-align:center;cursor:pointer;"></div>').text('▶ Відкрити серію у браузері');
-            var note  = $('<div style="opacity:0.5;font-size:0.85em;text-align:center;"></div>').text(object.url);
+            html.append($('<div style="font-size:1.5em;font-weight:bold;text-align:center;"></div>').text(object.title));
 
-            btn.on('hover:enter click', function () {
-                if (window.AndroidJS) window.open(object.url, '_system');
-                else window.open(object.url, '_blank');
-            });
-
-            html.append(title).append(btn).append(note);
+            var btn = $('<div class="full-button selector" style="font-size:1.2em;padding:0.8em 2.5em;border-radius:0.4em;text-align:center;cursor:pointer;"></div>').text('▶ Відкрити серію у браузері');
+            btn.on('hover:enter click', function () { window.open(object.url, '_blank'); });
+            html.append(btn);
+            html.append($('<div style="opacity:0.5;font-size:0.8em;text-align:center;word-break:break-all;"></div>').text(object.url));
 
             Lampa.Controller.add('content', {
                 toggle: function () {
                     Lampa.Controller.collectionSet(html);
                     Lampa.Controller.collectionFocus(btn[0], html);
                 },
-                up:    function () { Lampa.Controller.toggle('head'); },
-                down:  function () {}, left: function () {}, right: function () {},
-                back:  self.back
+                up: function () { Lampa.Controller.toggle('head'); },
+                down: function () {}, left: function () {}, right: function () {},
+                back: self.back
             });
             Lampa.Controller.toggle('content');
             return this.render();
@@ -150,7 +139,7 @@
                         vote_average: '',
                         poster:       POSTER,
                         backdrop:     POSTER,
-                        overview:     'Сезон ' + seasonNum + ' — Гріффіни'
+                        overview:     'Сезон ' + seasonNum
                     });
 
                     card.on('hover:enter', function () {
@@ -161,10 +150,7 @@
                         });
                     });
 
-                    card.on('hover:focus', function (elem) {
-                        scroll.update(elem, true);
-                    });
-
+                    card.on('hover:focus', function (elem) { scroll.update(elem, true); });
                     files.append(card);
                 })(s);
             }
@@ -183,10 +169,7 @@
                 },
                 left:  function () { Navigator.move('left'); },
                 right: function () { Navigator.move('right'); },
-                up: function () {
-                    if (Navigator.canmove('up')) Navigator.move('up');
-                    else Lampa.Controller.toggle('head');
-                },
+                up:    function () { Navigator.canmove('up') ? Navigator.move('up') : Lampa.Controller.toggle('head'); },
                 down:  function () { Navigator.move('down'); },
                 back:  this.back
             });
@@ -206,19 +189,12 @@
     Lampa.Component.add('fg_watch',    WatchComponent);
 
     // ---- ДОДАЄМО КНОПКУ В МЕНЮ ----
+    // name — просто рядок, НЕ ключ перекладу
     function addMenu() {
-        Lampa.Lang.add({
-            fg_menu_title: {
-                ru: 'Гріффіни',
-                uk: 'Гріффіни',
-                en: 'Family Guy'
-            }
-        });
-
         Lampa.Menu.addButton({
-            id:    'family_guy',
-            name:  'fg_menu_title',
-            icon:  '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M3 21c0-4.418 4.029-8 9-8s9 3.582 9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+            id:     'family_guy',
+            name:   'Гріффіни',           // <- звичайний рядок
+            icon:   '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M3 21c0-4.418 4.029-8 9-8s9 3.582 9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
             action: function () {
                 Lampa.Activity.push({
                     title:     'Гріффіни',
@@ -229,7 +205,6 @@
         });
     }
 
-    // ---- СТАРТ ----
     if (window.appready) {
         addMenu();
     } else {
