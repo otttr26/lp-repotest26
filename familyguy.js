@@ -4,21 +4,15 @@
     var BASE_URL = 'https://family-guy.mult-fan.tv';
     var POSTER   = 'https://family-guy.mult-fan.tv/images/logoBig.webp';
 
-    // ---- ДОДАЄМО КНОПКУ В МЕНЮ ----
     function addMenu() {
         var icon = '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M3 21c0-4.418 4.029-8 9-8s9 3.582 9 8" stroke="currentColor" stroke-width="1.5"/></svg>';
         var item = $('<li class="menu__item selector"><div class="menu__ico">' + icon + '</div><div class="menu__text">Гріффіни</div></li>');
         item.on('hover:enter click', function () {
-            Lampa.Activity.push({
-                title:     'Гріффіни',
-                component: 'fg_seasons',
-                url:       BASE_URL
-            });
+            Lampa.Activity.push({ title: 'Гріффіни', component: 'fg_seasons', url: BASE_URL });
         });
         $('.menu__list').first().append(item);
     }
 
-    // ---- КОМПОНЕНТ: СЕЗОНИ ----
     function SeasonsComponent(object) {
         var scroll = new Lampa.Scroll({ mask: true, over: true });
         var active = false;
@@ -30,21 +24,18 @@
             for (var s = 24; s >= 1; s--) {
                 (function (seasonNum) {
                     var card = Lampa.Template.get('card', {
-                        title:        'Сезон ' + seasonNum,
+                        title: 'Сезон ' + seasonNum,
                         release_date: seasonNum === 24 ? 'Новий' : '',
-                        vote_average: '',
-                        poster:       POSTER,
-                        backdrop:     POSTER,
-                        overview:     'Сезон ' + seasonNum
+                        vote_average: '', poster: POSTER, backdrop: POSTER,
+                        overview: 'Сезон ' + seasonNum
                     });
                     card.on('hover:enter', function () {
                         Lampa.Activity.push({
-                            url:       BASE_URL + '/season.php?id=' + seasonNum,
-                            title:     'Гріффіни — Сезон ' + seasonNum,
+                            url: BASE_URL + '/season.php?id=' + seasonNum,
+                            title: 'Гріффіни — Сезон ' + seasonNum,
                             component: 'fg_episodes'
                         });
                     });
-                    card.on('hover:focus', function (elem) { scroll.update(elem, true); });
                     scroll.append(card);
                 })(s);
             }
@@ -77,7 +68,6 @@
         this.destroy = function () { scroll.destroy(); };
     }
 
-    // ---- КОМПОНЕНТ: СЕРІЇ ----
     function EpisodesComponent(object) {
         var network = new Lampa.Reguest();
         var scroll  = new Lampa.Scroll({ mask: true, over: true });
@@ -111,12 +101,11 @@
                     });
                     card.on('hover:enter', function () {
                         Lampa.Activity.push({
-                            url:       BASE_URL + '/page.php?id=' + id,
-                            title:     title,
+                            url: BASE_URL + '/page.php?id=' + id,
+                            title: title,
                             component: 'fg_watch'
                         });
                     });
-                    card.on('hover:focus', function (elem) { scroll.update(elem, true); });
                     scroll.append(card);
                 });
 
@@ -153,7 +142,6 @@
         this.destroy = function () { network.clear(); scroll.destroy(); };
     }
 
-    // ---- КОМПОНЕНТ: ПЕРЕГЛЯД ----
     function WatchComponent(object) {
         var html = $('<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1.5em;padding:3em;box-sizing:border-box;"></div>');
 
@@ -170,9 +158,9 @@
                     Lampa.Controller.collectionSet(html);
                     Lampa.Controller.collectionFocus(btn[0], html);
                 },
-                up:    function () { Lampa.Controller.toggle('head'); },
-                down:  function () {}, left: function () {}, right: function () {},
-                back:  self.back
+                up: function () { Lampa.Controller.toggle('head'); },
+                down: function () {}, left: function () {}, right: function () {},
+                back: self.back
             });
             Lampa.Controller.toggle('content');
             return this.render();
@@ -184,12 +172,10 @@
         this.destroy = function () {};
     }
 
-    // ---- РЕЄСТРАЦІЯ ----
     Lampa.Component.add('fg_seasons',  SeasonsComponent);
     Lampa.Component.add('fg_episodes', EpisodesComponent);
     Lampa.Component.add('fg_watch',    WatchComponent);
 
-    // ---- СТАРТ ----
     setTimeout(addMenu, 500);
 
 })();
