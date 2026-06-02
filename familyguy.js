@@ -6,41 +6,24 @@
     var PROXY    = 'https://api.allorigins.win/raw?url=';
 
     // ============================================================
-    // МЕНЮ — вставляємо в .menu__case (перша секція, не .nosort)
+    // МЕНЮ
     // ============================================================
     function addMenu() {
         var icon = '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M3 21c0-4.418 4.029-8 9-8s9 3.582 9 8" stroke="currentColor" stroke-width="1.5"/></svg>';
-        var item = $([
-            '<li class="menu__item selector" data-action="fg_seasons">',
-            '<div class="menu__ico">' + icon + '</div>',
-            '<div class="menu__text">Гріффіни</div>',
-            '</li>'
-        ].join(''));
-
+        var item = $('<li class="menu__item selector"><div class="menu__ico">' + icon + '</div><div class="menu__text">Гріффіни</div></li>');
         item.on('hover:enter click', function () {
-            Lampa.Activity.push({
-                title:     'Гріффіни',
-                component: 'fg_seasons',
-                url:       BASE_URL
-            });
+            Lampa.Activity.push({ title: 'Гріффіни', component: 'fg_seasons', url: BASE_URL });
         });
-
-        // Додаємо в першу секцію меню (динамічні пункти)
-        var menuCase = $('.menu__case').not('.nosort').first();
-        if (!menuCase.length) menuCase = $('.menu__list').first();
-        menuCase.append(item);
+        var target = $('.menu__case').not('.nosort').first();
+        if (!target.length) target = $('.menu__list').first();
+        target.append(item);
     }
 
     // ============================================================
-    // FETCH через проксі
+    // FETCH
     // ============================================================
     function fetchPage(url, success, error) {
-        $.ajax({
-            url:     PROXY + encodeURIComponent(url),
-            timeout: 15000,
-            success: success,
-            error:   error || function () {}
-        });
+        $.ajax({ url: PROXY + encodeURIComponent(url), timeout: 15000, success: success, error: error || function(){} });
     }
 
     // ============================================================
@@ -48,97 +31,88 @@
     // ============================================================
     function makeCard(title, year) {
         return Lampa.Template.get('card', {
-            title:        title,
-            release_year: year || '',
-            vote_average: '',
-            poster:       POSTER,
-            backdrop:     POSTER,
-            overview:     title
+            title: title, release_year: year || '',
+            vote_average: '', poster: POSTER, backdrop: POSTER, overview: title
         });
     }
 
     // ============================================================
-    // БАЗОВИЙ КОМПОНЕНТ з правильним Controller
-    // Згідно з документацією: collectionSet отримує scroll.render(true)
-    // MutationObserver сам підхоплює .selector в DOM
+    // БАЗОВИЙ GRID КОМПОНЕНТ
     // ============================================================
-    function BaseGridComponent() {
-        this.scroll  = new Lampa.Scroll({ mask: true, over: true });
-        this.active  = false;
-        this._self   = this;
+    function GridComponent(object) {
+        this.object = object;
+        this.scroll = new Lampa.Scroll({ mask: true, over: true });
+        this.active = false;
     }
 
-    BaseGridComponent.prototype.startController = function () {
+    GridComponent.prototype.create = function () { return this.render(); };
+
+    GridComponent.prototype.start = function () {
         if (this.active) return;
         this.active = true;
-        var self = this;
-        var scrollEl = self.scroll.render(true);
+        var self    = this;
+        var el      = this.scroll.render(true);
 
         Lampa.Controller.add('content', {
             toggle: function () {
-                Lampa.Controller.collectionSet(scrollEl);
-                Lampa.Controller.collectionFocus(false, scrollEl);
+                Lampa.Controller.collectionSet(el);
+                Lampa.Controller.collectionFocus(false, el);
             },
-            left:  function () {
-                if (Navigator.canmove('left')) Navigator.move('left');
-                else Lampa.Controller.toggle('menu');
-            },
-            right: function () { Navigator.move('right'); },
-            up:    function () {
-                if (Navigator.canmove('up')) Navigator.move('up');
-                else Lampa.Controller.toggle('head');
-            },
-            down:  function () { Navigator.move('down'); },
+            left:  function () { Navigator.canmove('left') ? Navigator.move('left') : Lampa.Controller.toggle('menu'); },
+            right: function () { Navigator.canmove('right') ? Navigator.move('right') : false; },
+            up:    function () { Navigator.canmove('up') ? Navigator.move('up') : Lampa.Controller.toggle('head'); },
+            down:  function () { Navigator.canmove('down') ? Navigator.move('down') : false; },
             back:  function () { Lampa.Activity.backward(); }
         });
-
         Lampa.Controller.toggle('content');
     };
 
-    BaseGridComponent.prototype.pause   = function () { this.active = false; };
-    BaseGridComponent.prototype.stop    = function () { this.active = false; };
-    BaseGridComponent.prototype.back    = function () { Lampa.Activity.backward(); };
-    BaseGridComponent.prototype.render  = function () { return this.scroll.render(); };
-    BaseGridComponent.prototype.destroy = function () { this.scroll.destroy(); };
-    BaseGridComponent.prototype.start   = function () { this.startController(); };
+    GridComponent.prototype.pause   = function () { this.active = false; };
+    GridComponent.prototype.stop    = function () { this.active = false; };
+    GridComponent.prototype.back    = function () { Lampa.Activity.backward(); };
+    GridComponent.prototype.render  = function () { return this.scroll.render(); };
+    GridComponent.prototype.destroy = function () { this.scroll.destroy(); };
+
+    // Додати картку з автоскролом при фокусі
+    GridComponent.prototype.addCard = function (card, onEnter) {
+        var self = this;
+        card.on('hover:enter', onEnter);
+        // hover:focus — скролимо до картки (як в рідному items.js рядок 53-54)
+        card.on('hover:focus', function () {
+            self.scroll.update(card, false);
+        });
+        this.scroll.append(card);
+    };
+
+    GridComponent.prototype.done = function () {
+        var self = this;
+        requestAnimationFrame(function () { self.start(); });
+    };
 
     // ============================================================
     // СЕЗОНИ
     // ============================================================
     function SeasonsComponent(object) {
-        BaseGridComponent.call(this);
-        this.object = object;
+        GridComponent.call(this, object);
     }
-    SeasonsComponent.prototype = Object.create(BaseGridComponent.prototype);
+    SeasonsComponent.prototype = Object.create(GridComponent.prototype);
     SeasonsComponent.prototype.constructor = SeasonsComponent;
 
     SeasonsComponent.prototype.create = function () {
-        var self = this;
         this.scroll.minus();
-
-        // Картки додаємо прямо в scroll (в його scroll__body)
         for (var s = 24; s >= 1; s--) {
-            (function (seasonNum) {
+            (function (seasonNum, self) {
                 var card = makeCard('Сезон ' + seasonNum, seasonNum === 24 ? 'Новий' : '');
-                card.on('hover:enter', function () {
+                self.addCard(card, function () {
                     Lampa.Activity.push({
-                        url:       BASE_URL + '/season.php?id=' + seasonNum,
-                        title:     'Гріффіни — Сезон ' + seasonNum,
+                        url:   BASE_URL + '/season.php?id=' + seasonNum,
+                        title: 'Гріффіни — Сезон ' + seasonNum,
                         component: 'fg_episodes'
                     });
                 });
-                // scroll.append додає в scroll__body — правильний спосіб
-                self.scroll.append(card);
-            })(s);
+            })(s, this);
         }
-
-        // Після додавання карток — запускаємо контролер
-        // requestAnimationFrame гарантує що DOM оновився перед collectionSet
-        var scrollEl = this.scroll.render(true);
-        requestAnimationFrame(function () {
-            self.startController();
-        });
-
+        this.done();
         return this.render();
     };
 
@@ -146,98 +120,100 @@
     // СЕРІЇ
     // ============================================================
     function EpisodesComponent(object) {
-        BaseGridComponent.call(this);
-        this.object = object;
+        GridComponent.call(this, object);
     }
-    EpisodesComponent.prototype = Object.create(BaseGridComponent.prototype);
+    EpisodesComponent.prototype = Object.create(GridComponent.prototype);
     EpisodesComponent.prototype.constructor = EpisodesComponent;
 
     EpisodesComponent.prototype.create = function () {
         var self = this;
         this.scroll.minus();
-
-        // Показуємо лоадер
-        var loader = $('<div style="padding:1.5em;opacity:0.7;font-size:1.1em;">⏳ Завантаження серій...</div>');
-        this.scroll.append(loader);
+        this.scroll.append($('<div style="padding:1.5em;opacity:0.7;">⏳ Завантаження...</div>'));
 
         fetchPage(this.object.url, function (html) {
-            // Очищаємо лоадер
             self.scroll.clear();
-
             var doc   = (new DOMParser()).parseFromString(html, 'text/html');
             var links = doc.querySelectorAll('a[href*="page.php?id="]');
 
             if (!links.length) {
                 self.scroll.append($('<div style="padding:2em;opacity:0.6;">Серії не знайдено</div>'));
-                requestAnimationFrame(function () { self.startController(); });
+                self.done();
                 return;
             }
 
             links.forEach(function (a) {
                 var match = (a.getAttribute('href') || '').match(/page\.php\?id=(\d+)/);
                 if (!match) return;
-
                 var id    = match[1];
                 var epNum = parseInt(id.slice(-2), 10) || 0;
-                var lines = a.textContent.trim().split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
-                var title = 'Е' + String(epNum).padStart(2, '0') + ' — ' + (lines[0] || 'Серія ' + epNum);
+                // Беремо назву серії з тексту посилання (перший рядок)
+                var lines = a.textContent.trim().split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+                var name  = lines[0] || 'Серія ' + epNum;
+                var title = 'Е' + String(epNum).padStart(2,'0') + ' — ' + name;
+                var epUrl = BASE_URL + '/page.php?id=' + id;
 
                 var card = makeCard(title, '');
-                card.on('hover:enter', function () {
+                self.addCard(card, function () {
                     Lampa.Activity.push({
-                        url:       BASE_URL + '/page.php?id=' + id,
-                        title:     title,
-                        component: 'fg_watch'
+                        url: epUrl, title: title, component: 'fg_watch'
                     });
                 });
-                self.scroll.append(card);
             });
 
-            requestAnimationFrame(function () { self.startController(); });
-
+            self.done();
         }, function () {
             self.scroll.clear();
-            self.scroll.append($('<div style="padding:2em;opacity:0.6;">❌ Помилка завантаження. Перевір інтернет.</div>'));
-            requestAnimationFrame(function () { self.startController(); });
+            self.scroll.append($('<div style="padding:2em;opacity:0.6;">❌ Помилка завантаження</div>'));
+            self.done();
         });
 
         return this.render();
     };
 
     // ============================================================
-    // ПЕРЕГЛЯД СЕРІЇ
+    // ПЕРЕГЛЯД — iframe прямо в Lampa
     // ============================================================
     function WatchComponent(object) {
-        this.object = object;
-        this.html   = $('<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1.5em;padding:3em;box-sizing:border-box;"></div>');
+        this.object  = object;
+        this.iframe  = null;
+        this.html    = $('<div class="fg-watch" style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;"></div>');
     }
 
     WatchComponent.prototype.create = function () {
         var self = this;
 
-        this.html.append(
-            $('<div style="font-size:1.6em;font-weight:bold;text-align:center;max-width:80%;"></div>')
-                .text(this.object.title)
-        );
+        // Заголовок
+        var header = $('<div style="padding:0.8em 1.5em;font-size:1.1em;font-weight:bold;opacity:0.9;flex-shrink:0;"></div>').text(this.object.title);
 
-        var btn = $('<div class="full-button selector" style="font-size:1.2em;padding:0.8em 2.5em;border-radius:0.4em;text-align:center;cursor:pointer;min-width:16em;"></div>')
-            .text('▶ Відкрити у браузері');
-
-        btn.on('hover:enter click', function () {
-            window.open(self.object.url, '_blank');
+        // iframe контейнер
+        var iframeWrap = $('<div style="flex:1;position:relative;background:#000;"></div>');
+        var iframe = $('<iframe></iframe>').attr({
+            src:             this.object.url,
+            frameborder:     '0',
+            allowfullscreen: 'true',
+            scrolling:       'yes'
+        }).css({
+            width:  '100%',
+            height: '100%',
+            border: 'none',
+            display: 'block'
         });
 
-        this.html.append(btn);
-        this.html.append(
-            $('<div style="opacity:0.4;font-size:0.75em;text-align:center;word-break:break-all;max-width:90%;margin-top:0.5em;"></div>')
-                .text(this.object.url)
-        );
+        // Кнопка "відкрити в браузері" як fallback
+        var btnWrap = $('<div style="padding:0.8em 1.5em;flex-shrink:0;display:flex;gap:1em;"></div>');
+        var btnBrowser = $('<div class="full-button selector" style="padding:0.6em 2em;border-radius:0.4em;text-align:center;cursor:pointer;font-size:1em;"></div>').text('🌐 Відкрити у браузері');
+        btnBrowser.on('hover:enter click', function () { window.open(self.object.url, '_blank'); });
+
+        btnWrap.append(btnBrowser);
+        iframeWrap.append(iframe);
+        this.html.append(header).append(iframeWrap).append(btnWrap);
+        this.iframe = iframe;
 
         var htmlEl = this.html[0];
         Lampa.Controller.add('content', {
             toggle: function () {
                 Lampa.Controller.collectionSet(htmlEl);
-                Lampa.Controller.collectionFocus(btn[0], htmlEl);
+                Lampa.Controller.collectionFocus(btnBrowser[0], htmlEl);
             },
             up:    function () { Lampa.Controller.toggle('head'); },
             down:  function () {},
@@ -252,10 +228,10 @@
 
     WatchComponent.prototype.start   = function () {};
     WatchComponent.prototype.pause   = function () {};
-    WatchComponent.prototype.stop    = function () {};
+    WatchComponent.prototype.stop    = function () { if (this.iframe) this.iframe.attr('src', ''); };
     WatchComponent.prototype.back    = function () { Lampa.Activity.backward(); };
     WatchComponent.prototype.render  = function () { return this.html; };
-    WatchComponent.prototype.destroy = function () {};
+    WatchComponent.prototype.destroy = function () { if (this.iframe) this.iframe.attr('src', ''); };
 
     // ============================================================
     // РЕЄСТРАЦІЯ
@@ -264,11 +240,6 @@
     Lampa.Component.add('fg_episodes', EpisodesComponent);
     Lampa.Component.add('fg_watch',    WatchComponent);
 
-    // ============================================================
-    // СТАРТ
-    // ============================================================
     setTimeout(addMenu, 500);
-
-    console.log('[FamilyGuy] плагін завантажено ✅');
 
 })();
