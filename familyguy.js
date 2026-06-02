@@ -3,6 +3,7 @@
 
     var BASE_URL = 'https://family-guy.mult-fan.tv';
     var POSTER   = 'https://family-guy.mult-fan.tv/images/logoBig.webp';
+    var PROXY    = 'https://api.allorigins.win/raw?url=';
 
     function addMenu() {
         var icon = '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M3 21c0-4.418 4.029-8 9-8s9 3.582 9 8" stroke="currentColor" stroke-width="1.5"/></svg>';
@@ -13,30 +14,54 @@
         $('.menu__list').first().append(item);
     }
 
-    function SeasonsComponent(object) {
+    function fetchPage(url, success, error) {
+        $.ajax({
+            url:     PROXY + encodeURIComponent(url),
+            timeout: 15000,
+            success: success,
+            error:   error || function() {}
+        });
+    }
+
+    function makeCard(title, year) {
+        return Lampa.Template.get('card', {
+            title:        title,
+            release_year: year || '',
+            vote_average: '',
+            poster:       POSTER,
+            backdrop:     POSTER,
+            overview:     title
+        });
+    }
+
+    // Створюємо scroll зі grid-контейнером всередині
+    function createGridScroll(cols) {
         var scroll = new Lampa.Scroll({ mask: true, over: true });
+        scroll.minus();
+        var body = $('<div class="mapping--grid cols--' + (cols || 6) + '"></div>');
+        scroll.append(body);
+        return { scroll: scroll, body: body };
+    }
+
+    // ---- СЕЗОНИ ----
+    function SeasonsComponent(object) {
+        var grid   = createGridScroll(6);
         var active = false;
 
         this.create = function () {
             var self = this;
-            scroll.minus();
 
             for (var s = 24; s >= 1; s--) {
                 (function (seasonNum) {
-                    var card = Lampa.Template.get('card', {
-                        title: 'Сезон ' + seasonNum,
-                        release_date: seasonNum === 24 ? 'Новий' : '',
-                        vote_average: '', poster: POSTER, backdrop: POSTER,
-                        overview: 'Сезон ' + seasonNum
-                    });
+                    var card = makeCard('Сезон ' + seasonNum, seasonNum === 24 ? 'Новий' : '');
                     card.on('hover:enter', function () {
                         Lampa.Activity.push({
-                            url: BASE_URL + '/season.php?id=' + seasonNum,
-                            title: 'Гріффіни — Сезон ' + seasonNum,
+                            url:       BASE_URL + '/season.php?id=' + seasonNum,
+                            title:     'Гріффіни — Сезон ' + seasonNum,
                             component: 'fg_episodes'
                         });
                     });
-                    scroll.append(card);
+                    grid.body.append(card);
                 })(s);
             }
 
@@ -49,8 +74,8 @@
             active = true;
             Lampa.Controller.add('content', {
                 toggle: function () {
-                    Lampa.Controller.collectionSet(scroll.render(), scroll.render());
-                    Lampa.Controller.collectionFocus(false, scroll.render());
+                    Lampa.Controller.collectionSet(grid.scroll.render(), grid.scroll.render());
+                    Lampa.Controller.collectionFocus(false, grid.scroll.render());
                 },
                 left:  function () { Navigator.move('left'); },
                 right: function () { Navigator.move('right'); },
@@ -64,25 +89,26 @@
         this.back    = function () { Lampa.Activity.backward(); };
         this.pause   = function () { active = false; };
         this.stop    = function () { active = false; };
-        this.render  = function () { return scroll.render(); };
-        this.destroy = function () { scroll.destroy(); };
+        this.render  = function () { return grid.scroll.render(); };
+        this.destroy = function () { grid.scroll.destroy(); };
     }
 
+    // ---- СЕРІЇ ----
     function EpisodesComponent(object) {
-        var network = new Lampa.Reguest();
-        var scroll  = new Lampa.Scroll({ mask: true, over: true });
-        var active  = false;
+        var grid   = createGridScroll(6);
+        var active = false;
 
         this.create = function () {
             var self = this;
-            scroll.minus();
+            grid.body.append($('<div style="padding:1em;opacity:0.7;width:100%;">Завантаження...</div>'));
 
-            network.silent(object.url, function (html) {
+            fetchPage(object.url, function (html) {
+                grid.body.empty();
                 var doc   = (new DOMParser()).parseFromString(html, 'text/html');
                 var links = doc.querySelectorAll('a[href*="page.php?id="]');
 
                 if (!links.length) {
-                    scroll.append($('<div style="padding:2em;opacity:0.6;">Серії не знайдено</div>'));
+                    grid.body.append($('<div style="padding:2em;opacity:0.6;width:100%;">Серії не знайдено</div>'));
                     self.start();
                     return;
                 }
@@ -92,26 +118,24 @@
                     if (!match) return;
                     var id    = match[1];
                     var epNum = parseInt(id.slice(-2), 10) || 0;
-                    var title = 'Е' + String(epNum).padStart(2, '0') + ' — '
-                                + (a.textContent.trim().split('\n')[0].trim() || 'Серія ' + epNum);
+                    var lines = a.textContent.trim().split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+                    var title = 'Е' + String(epNum).padStart(2, '0') + ' — ' + (lines[0] || 'Серія ' + epNum);
 
-                    var card = Lampa.Template.get('card', {
-                        title: title, release_date: '', vote_average: '',
-                        poster: POSTER, backdrop: POSTER, overview: title
-                    });
+                    var card = makeCard(title, '');
                     card.on('hover:enter', function () {
                         Lampa.Activity.push({
-                            url: BASE_URL + '/page.php?id=' + id,
-                            title: title,
+                            url:       BASE_URL + '/page.php?id=' + id,
+                            title:     title,
                             component: 'fg_watch'
                         });
                     });
-                    scroll.append(card);
+                    grid.body.append(card);
                 });
 
                 self.start();
             }, function () {
-                scroll.append($('<div style="padding:2em;opacity:0.6;">Помилка завантаження</div>'));
+                grid.body.empty();
+                grid.body.append($('<div style="padding:2em;opacity:0.6;width:100%;">Помилка завантаження</div>'));
                 self.start();
             });
 
@@ -123,8 +147,8 @@
             active = true;
             Lampa.Controller.add('content', {
                 toggle: function () {
-                    Lampa.Controller.collectionSet(scroll.render(), scroll.render());
-                    Lampa.Controller.collectionFocus(false, scroll.render());
+                    Lampa.Controller.collectionSet(grid.scroll.render(), grid.scroll.render());
+                    Lampa.Controller.collectionFocus(false, grid.scroll.render());
                 },
                 left:  function () { Navigator.move('left'); },
                 right: function () { Navigator.move('right'); },
@@ -138,10 +162,11 @@
         this.back    = function () { Lampa.Activity.backward(); };
         this.pause   = function () { active = false; };
         this.stop    = function () { active = false; };
-        this.render  = function () { return scroll.render(); };
-        this.destroy = function () { network.clear(); scroll.destroy(); };
+        this.render  = function () { return grid.scroll.render(); };
+        this.destroy = function () { grid.scroll.destroy(); };
     }
 
+    // ---- ПЕРЕГЛЯД ----
     function WatchComponent(object) {
         var html = $('<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1.5em;padding:3em;box-sizing:border-box;"></div>');
 
