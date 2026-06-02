@@ -74,8 +74,8 @@
             active = true;
             Lampa.Controller.add('content', {
                 toggle: function () {
-                    Lampa.Controller.collectionSet(grid.scroll.render(), grid.scroll.render());
-                    Lampa.Controller.collectionFocus(false, grid.scroll.render());
+                    Lampa.Controller.collectionSet(grid.scroll.render(true));
+                    Lampa.Controller.collectionFocus(false, grid.scroll.render(true));
                 },
                 left:  function () { Navigator.move('left'); },
                 right: function () { Navigator.move('right'); },
@@ -147,8 +147,8 @@
             active = true;
             Lampa.Controller.add('content', {
                 toggle: function () {
-                    Lampa.Controller.collectionSet(grid.scroll.render(), grid.scroll.render());
-                    Lampa.Controller.collectionFocus(false, grid.scroll.render());
+                    Lampa.Controller.collectionSet(grid.scroll.render(true));
+                    Lampa.Controller.collectionFocus(false, grid.scroll.render(true));
                 },
                 left:  function () { Navigator.move('left'); },
                 right: function () { Navigator.move('right'); },
